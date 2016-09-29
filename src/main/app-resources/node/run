@@ -3,11 +3,179 @@
 # source the ciop functions (e.g. ciop-log, ciop-getparam)
 source ${ciop_job_include}
 
+# define the exit codes
+SUCCESS=0
+ERR_INPUT=10
+ERR_GETDATA=20
+ERR_DOWNLOAD=30
+ERR_EXTRACT=40
+ERR_PROCESS=50
+ERR_PUBLISH=60
+
+# Global variables
+GPT="/opt/snap-3.0/bin/gpt"
+
+#####################################################
+#                                                   #
+#                    functions                      #
+#                                                   #
+#####################################################
+
+function cleanExit () {
+  # add a trap to exit gracefully
+  local retval=$?
+  local msg=""
+
+  case $retval in
+    $SUCCESS) msg="Processing successfully concluded";;
+    $ERR_INPUT) msg="Input is not in the form source1;source2";;
+    $ERR_GETDATA) msg="Error while discovering product";;
+    $ERR_DOWNLOAD) msg="Failed to download product";;
+    $ERR_EXTRACT) msg="Failed to extract product";;
+    $ERR_PROCESS) msg="Failed during process execution";;
+    $ERR_PUBLISH) msg="Failed to publish results";;
+    *) msg="Unknown error";;
+  esac
+  [ $retval -ne 0 ] && ciop-log "ERROR" "Error $retval - $msg, processing aborted" || ciop-log "INFO" "$msg"
+  exit $retval
+}
+
+trap cleanExit EXIT
+
+function clean() {
+  # clean the used TMPDIR before next input
+  rm -rf $1/downloads $1/output
+}
+
+function subset_prec_therm_calib() {
+  local sourceFile="$1"
+  local tmp="$2"
+  local targetFile="/tmp/${sourceFile}_pp.dim"
+  local XML="/application/node/subset_prec_therm_calib.xml"
+
+  ciop-log "INFO" "Pre-processing ${sourceFile} image..."
+  ${GPT} ${XML} -PinFile="${sourceFile}" -PoutFile="${targetFile}" -PselPol="${polarization}" -PgeoRegion="${polygon}" # 2> /dev/null
+}
+
+function terrain_correction() {
+   local sourceFile="/tmp/${1}_pp.dim"
+   local XML="/application/node/terrain_correction.xml"
+   local targetFile="/tmp/${1}_tc.dim"
+
+   ciop-log "INFO" "Terrain correcting ${sourceFile} image..."
+   ${GPT} ${XML} -PinFile="${sourceFile}" -PoutFile="${targetFile}" # 2> /dev/null
+}
+
+function stack() {
+  local sourceFile1="/tmp/${1}_tc.dim"
+  local sourceFile2="/tmp/${2}_tc.dim"
+  local XML="/application/node/stack.xml"
+  local targetFile="/tmp/${1}_stack.dim"
+  
+  ciop-log "INFO" "Performing stack..."
+  ${GPT} ${XML} -PstackFile="${sourceFile1},${sourceFile2}" -PoutFile="${targetFile}" # 2> /dev/null
+}
+
+function change_detection() {
+  local sourceFile="/tmp/${1}_stack.dim"
+  local XML="/application/node/change_detection.xml"
+  local targetFile="/tmp/${1}_cd.dim"
+
+  # Get band names
+  grep "BAND_NAME" ${sourceFile} | awk '{start=index($0, ">"); print substr(substr($0, start+1), 0, length(substr($0, start+1))-12);}' > /tmp/tmp.txt
+
+  mapfile < /tmp/tmp.txt
+
+  BANDNAME1=${MAPFILE[0]}
+  BANDNAME2=${MAPFILE[1]}
+
+  rm /tmp/tmp.txt
+
+  ciop-log "INFO" "Performing change detection..."
+  ${GPT} ${XML} -PinFile="${sourceFile}" -PbName0="${BANDNAME1}" -PbName1="${BANDNAME2}" -PoutFile="${targetFile}" # 2> /dev/null
+}
+
+function get_data() {
+  echo ${1:7}
+}
+
+function main() {
+  # main execution function
+  source1="$( echo "$1" | cut -d ';' -f 1 )"
+  source2="$( echo "$1" | cut -d ';' -f 2 )"
+  TMPDIR="$2"
+
+  [ -z "${source1}" ] || [ -z "${source2}" ] && return ${ERR_INPUT}
+
+  #ciop-log "INFO" "downloading source1 [${source1}]"
+  source1=$( get_data "${source1}" "${TMPDIR}/downloads" )
+  #[ $? -ne 0 ] && return ${ERR_DOWNLOAD}
+
+  #ciop-log "INFO" "downloading source2 [${source2}]"
+  source2=$( get_data "${source2}" "${TMPDIR}/downloads" )
+  #[ $? -ne 0 ] && return ${ERR_DOWNLOAD}
+
+  ciop-log "INFO" "source1: ${source1}"
+  ciop-log "INFO" "source2: ${source2}"
+
+  polygon=$( ciop-getparam "polygon" )
+  polarization=$( ciop-getparam "polarization" )
+
+  ciop-log "INFO" "polygon: ${polygon}"
+  ciop-log "INFO" "polarization: ${polarization}"
+
+  # run gpt to get the change detection .dim file
+  cd ${TMPDIR}/output
+  ciop-log "INFO" "Running the change detection processing chain"
+  export AuxDataPath="${TMPDIR}/aux"
+  
+  subset_prec_therm_calib "${source1}" "${TMPDIR}/output"
+  [ $? -ne 0 ] && return ${ERR_PROCESS}
+  subset_prec_therm_calib "${source2}" "${TMPDIR}/output"
+  [ $? -ne 0 ] && return ${ERR_PROCESS}
+
+  terrain_correction "${source1}" "${TMPDIR}/output"
+  [ $? -ne 0 ] && return ${ERR_PROCESS}
+  terrain_correction "${source2}" "${TMPDIR}/output"
+  [ $? -ne 0 ] && return ${ERR_PROCESS}
+
+  stack "${source1}" "${source2}" "${TMPDIR}/output"
+  [ $? -ne 0 ] && return ${ERR_PROCESS}
+
+  change_detection "${source1}" "${source2}" "${TMPDIR}/output"
+  [ $? -ne 0 ] && return ${ERR_PROCESS}
+
+  return $SUCCESS
+}
+
+
+#####################################################
+#                                                   #
+#                   main loop                       #
+#                                                   #
+#####################################################
+
+#creating the temporary directory
+TMPDIR=/tmp/$( uuidgen )
+
 # Loops over all the inputs
 while read inputfile 
 do
-  # report activity in log
-  ciop-log "INFO" "The input file is: $inputfile"
+  mkdir -p ${TMPDIR}/downloads
+  mkdir -p ${TMPDIR}/output
+
+  #executing main on the current input file
+  main "$( echo "${inputfile}" | sed 's#\$#\\$#g' )" "${TMPDIR}"
+  res=$?
+  [ ${res} -ne 0 ] && exit ${res}
+
+  #cleaning up dir
+  #clean "${TMPDIR}"
 done
 
-exit 0
+#ciop-log "INFO" "Cleaning up temporary directory"
+#rm -rf "${TMPDIR}"
+
+ciop-log "INFO" "SatCen change detection processing finished!"
+exit $SUCCESS
+

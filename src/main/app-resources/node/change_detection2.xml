@@ -1,0 +1,58 @@
+<graph id="Graph">
+  <version>1.0</version>
+  <node id="ProductSet-Reader">
+    <operator>ProductSet-Reader</operator>
+    <sources/>
+    <parameters class="com.bc.ceres.binding.dom.XppDomElement">
+      <fileList>${stackFile}</fileList>
+    </parameters>
+  </node>
+  <node id="CreateStack">
+    <operator>CreateStack</operator>
+    <sources>
+      <sourceProduct refid="ProductSet-Reader"/>
+    </sources>
+    <parameters class="com.bc.ceres.binding.dom.XppDomElement">
+      <masterBands/>
+      <sourceBands/>
+      <resamplingType>BICUBIC_INTERPOLATION</resamplingType>
+      <extent>Minimum</extent>
+      <initialOffsetMethod>Orbit</initialOffsetMethod>
+    </parameters>
+  </node>
+  <node id="Change-Detection">
+    <operator>Change-Detection</operator>
+    <sources>
+      <sourceProduct refid="CreateStack"/>
+    </sources>
+    <parameters class="com.bc.ceres.binding.dom.XppDomElement">
+	  <sourceBands/>
+      <maskUpperThreshold>2.0</maskUpperThreshold>
+      <maskLowerThreshold>-2.0</maskLowerThreshold>
+      <includeSourceBands>false</includeSourceBands>
+      <outputLogRatio>false</outputLogRatio>
+    </parameters>
+  </node>
+  <node id="Write">
+    <operator>Write</operator>
+    <sources>
+      <sourceProduct refid="Change-Detection"/>
+    </sources>
+    <parameters class="com.bc.ceres.binding.dom.XppDomElement">
+      <file>${outFile}</file>
+      <formatName>BEAM-DIMAP</formatName>
+    </parameters>
+  </node>    
+  <applicationData id="Presentation">
+    <Description/>
+    <node id="Read">
+            <displayPosition x="37.0" y="134.0"/>
+    </node>
+    <node id="Change-Detection">
+      <displayPosition x="122.0" y="56.0"/>
+    </node>
+    <node id="Write">
+      <displayPosition x="448.0" y="101.0"/>
+    </node>       
+  </applicationData>
+</graph>
