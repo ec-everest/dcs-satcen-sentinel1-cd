@@ -33,7 +33,7 @@
       <continueOnFail>true</continueOnFail>
     </parameters>
   </node>
-<!--  <node id="ThermalNoiseRemoval">
+  <node id="ThermalNoiseRemoval">
     <operator>ThermalNoiseRemoval</operator>
     <sources>
       <sourceProduct refid="Apply-Orbit-File"/>
@@ -62,11 +62,11 @@
       <outputGammaBand>false</outputGammaBand>
       <outputBetaBand>false</outputBetaBand>
     </parameters>
-  </node>-->
+  </node>
   <node id="Write">
     <operator>Write</operator>
     <sources>
-      <sourceProduct refid="Apply-Orbit-File"/>
+      <sourceProduct refid="Calibration"/>
     </sources>
     <parameters class="com.bc.ceres.binding.dom.XppDomElement">
       <file>${outFile}</file>

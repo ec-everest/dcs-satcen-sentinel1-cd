@@ -128,6 +128,14 @@ function change_detection() {
   return $?
 }
 
+function setGDALEnv() {
+  # setup GDAL environment
+  export GDAL_HOME=$( find /opt/anaconda/pkgs/ -name "gdal-2.1.0-py27_?" )
+  export PATH=$GDAL_HOME/bin/:$PATH
+  export LD_LIBRARY_PATH=$GDAL_HOME/lib/:/opt/anaconda/pkgs/geos-3.4.2-0/lib:/opt/anaconda/lib:$LD_LIBRARY_PATH
+  export GDAL_DATA=$GDAL_HOME/share/gdal
+}
+
 function get_data() {
   
   local ref=$1
@@ -201,6 +209,10 @@ function main() {
 
   # stage-out the binned product
   ciop-publish -m ${TMPDIR}/cd.tgz 
+
+  gdal_translate ${TMPDIR}/cd.data/newBand.img ${TMPDIR}/cd.tif
+
+  ciop-publish -m ${TMPDIR}/cd.tif
 
   return $SUCCESS
 }
