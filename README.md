@@ -56,6 +56,14 @@ Or invoke the Web Processing Service via the Sandbox dashboard providing a maste
 * https://catalog.terradue.com/sentinel1/search?uid=S1A_IW_GRDH_1SDV_20160702T181046_20160702T181111_011973_01276C_42D6 (master)
 * https://catalog.terradue.com/sentinel1/search?uid=S1A_IW_GRDH_1SDV_20160726T181047_20160726T181112_012323_0132DA_8A2E (slave)
 
+### <a name="community"></a>Community and Documentation
+
+To learn more and find information go to
+
+* [Developer Cloud Sandbox](http://docs.terradue.com/developer) service
+* [Land monitoring in EVER-EST](http://ever-est.eu/communities/land-monitoring) 
+* [EVER-EST project](http://ever-est.eu)
+
 ### <a name="authors"></a>Authors
 
 * Paulo Nunes - SatCen
