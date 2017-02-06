@@ -1,0 +1,237 @@
+#!/bin/bash
+
+# source the ciop functions (e.g. ciop-log, ciop-getparam)
+source ${ciop_job_include}
+
+# define the exit codes
+SUCCESS=0
+ERR_INPUT=10
+ERR_GETDATA=20
+ERR_DOWNLOAD=30
+ERR_EXTRACT=40
+ERR_PROCESS=50
+ERR_PUBLISH=60
+ERR_NOSLAVE=15
+ERR_PROCESS_TH_CAL1=21
+ERR_PROCESS_TH_CAL2=22
+ERR_PROCESS_TC1=23
+ERR_PROCESS_TC2=24
+ERR_PROCESS_STACK=25
+ERR_PROCESS_CD=26
+
+# Global variables
+GPT="/opt/snap/bin/gpt"
+
+#####################################################
+#                                                   #
+#                    functions                      #
+#                                                   #
+#####################################################
+
+function cleanExit () {
+  # add a trap to exit gracefully
+  local retval=$?
+  local msg=""
+
+  case $retval in
+    $SUCCESS) msg="Processing successfully concluded";;
+    $ERR_INPUT) msg="Input is not in the form source1;source2";;
+    $ERR_GETDATA) msg="Error while discovering product";;
+    $ERR_DOWNLOAD) msg="Failed to download product";;
+    $ERR_EXTRACT) msg="Failed to extract product";;
+    $ERR_PROCESS) msg="Failed during process execution";;
+    $ERR_NOSLAVE) msg="No slave provided";;
+    $ERR_PROCESS_TH_CAL1) msg="Failed to process slave with subset_prec_therm_calib";;
+    $ERR_PROCESS_TH_CAL2) msg="Failed to process master with subset_prec_therm_calib";;
+    $ERR_PROCESS_TC1) msg="Failed to process slave with terrain_correction";;
+    $ERR_PROCESS_TC2) msg="Failed to process master with terrain_correction";;
+    $ERR_PROCESS_STACK) msg="Failed to create stack";;
+    $ERR_PROCESS_CD) msg="Failed to process change detection";;
+    $ERR_PUBLISH) msg="Failed to publish results";;
+    *) msg="Unknown error";;
+  esac
+  [ $retval -ne 0 ] && ciop-log "ERROR" "Error $retval - $msg, processing aborted" || ciop-log "INFO" "$msg"
+  exit $retval
+}
+
+trap cleanExit EXIT
+
+function clean() {
+  # clean the used TMPDIR before next input
+  rm -rf $1/downloads $1/output
+}
+
+function set_env() {
+
+  export AuxDataPath="${TMPDIR}/aux"
+  mkdir -p ${AuxDataPath}
+  
+  export SNAP_HOME=/opt/snap
+  export PATH=${SNAP_HOME}/bin:${PATH}
+  export SNAP_VERSION=$( cat ${SNAP_HOME}/VERSION.txt )
+}
+
+
+function subset_prec_therm_calib() {
+  local sourceFile="$1"
+  local targetFile="${TMPDIR}/${sourceFile}_pp.dim"
+  local XML="/application/change_detection/subset_prec_therm_calib.xml"
+
+  ciop-log "INFO" "Pre-processing ${sourceFile} image..."
+  ${GPT} ${XML} -PinFile="${sourceFile}" -PoutFile="${targetFile}" -PselPol="${polarization}" -PgeoRegion="${polygon}" 1>&2 # 2> /dev/null
+  
+  return $?
+}
+
+function terrain_correction() {
+   local sourceFile="${TMPDIR}/${1}_pp.dim"
+   local XML="/application/change_detection/terrain_correction.xml"
+   local targetFile="${TMPDIR}/${1}_tc.dim"
+
+   ciop-log "INFO" "Terrain correcting ${sourceFile} image..."
+   ${GPT} ${XML} -PinFile="${sourceFile}" -PoutFile="${targetFile}" 1>&2 # 2> /dev/null
+   
+   return $?
+}
+
+function stack() {
+  local sourceFile1="${TMPDIR}${1}_tc.dim"
+  local sourceFile2="${TMPDIR}${2}_tc.dim"
+  local XML="/application/change_detection/stack.xml"
+  local targetFile="${TMPDIR}/stack.dim"
+  
+  ciop-log "INFO" "Performing stack..."
+  ${GPT} ${XML} -PstackFile="${sourceFile1},${sourceFile2}" -PoutFile="${targetFile}" 1>&2 # 2> /dev/null
+  
+  return $?
+}
+
+function change_detection() {
+  local sourceFile="${TMPDIR}/stack.dim"
+  local XML="/application/change_detection/change_detection.xml"
+  local targetFile="${TMPDIR}/cd.dim"
+
+  # Get band names
+  grep "BAND_NAME" ${sourceFile} | awk '{start=index($0, ">"); print substr(substr($0, start+1), 0, length(substr($0, start+1))-12);}' > ${TMPDIR}/tmp.txt
+
+  mapfile < ${TMPDIR}/tmp.txt
+
+  BANDNAME1=${MAPFILE[0]}
+  BANDNAME2=${MAPFILE[1]}
+
+  rm ${TMPDIR}/tmp.txt
+
+  ciop-log "INFO" "Performing change detection..."
+  ${GPT} ${XML} -PinFile="${sourceFile}" -PbName0="${BANDNAME1}" -PbName1="${BANDNAME2}" -PoutFile="${targetFile}" 1>&2 # 2> /dev/null
+  
+  return $?
+}
+
+function get_data() {
+  
+  local ref=$1
+  local target=$2
+  local local_file
+  local enclosure
+  local res
+
+  [ "${ref:0:4}" == "file" ] || [ "${ref:0:1}" == "/" ] && enclosure=${ref}
+
+  [ -z "$enclosure" ] && enclosure=$( opensearch-client "${ref}" enclosure ) 
+  res=$?
+  enclosure=$( echo ${enclosure} | tail -1 )
+  [ $res -eq 0 ] && [ -z "${enclosure}" ] && return ${ERR_GETDATA}
+  [ $res -ne 0 ] && enclosure=${ref}
+
+  local_file="$( echo ${enclosure} | ciop-copy -f -U -O ${target} - 2> /dev/null )"
+  res=$?
+  [ ${res} -ne 0 ] && return ${res}
+  echo ${local_file}
+}
+
+function main() {
+  # main execution function
+  local source1=$1
+  local source2=$2
+  
+  [ -z "${source1}" ] || [ -z "${source2}" ] && return ${ERR_INPUT}
+
+  #ciop-log "INFO" "downloading source1 [${source1}]"
+  source1=$( get_data "${source1}" "${TMPDIR}/downloads" )
+  #[ $? -ne 0 ] && return ${ERR_DOWNLOAD}
+
+  #ciop-log "INFO" "downloading source2 [${source2}]"
+  source2=$( get_data "${source2}" "${TMPDIR}/downloads" )
+  #[ $? -ne 0 ] && return ${ERR_DOWNLOAD}
+
+  ciop-log "DEBUG" "source1: ${source1}"
+  ciop-log "DEBUG" "source2: ${source2}"
+
+  polygon=$( ciop-getparam "polygon" )
+  polarization=$( ciop-getparam "polarization" )
+
+  ciop-log "INFO" "polygon: ${polygon}"
+  ciop-log "INFO" "polarization: ${polarization}"
+
+  # run gpt to get the change detection .dim file
+ 
+  ciop-log "INFO" "Running the change detection processing chain"
+
+  subset_prec_therm_calib "${source1}"
+  [ $? -ne 0 ] && return ${ERR_PROCESS_TH_CAL1}
+  
+  subset_prec_therm_calib "${source2}" 
+  [ $? -ne 0 ] && return ${ERR_PROCESS_TH_CAL2}
+
+  terrain_correction "${source1}" 
+  [ $? -ne 0 ] && return ${ERR_PROCESS_TC1}
+
+  terrain_correction "${source2}" 
+  [ $? -ne 0 ] && return ${ERR_PROCESS_TC2}
+
+  stack "${source1}" "${source2}" 
+  [ $? -ne 0 ] && return ${ERR_PROCESS_STACK}
+
+  change_detection "${source1}" "${source2}" 
+  [ $? -ne 0 ] && return ${ERR_PROCESS_CD}
+
+  ciop-log "INFO" "Compressing and publishing change detection DIMAP product"
+  tar -C ${TMPDIR} -czf ${TMPDIR}/cd.tgz cd.dim cd.data 
+
+  # stage-out the binned product
+  ciop-publish -m ${TMPDIR}/cd.tgz 
+
+  return $SUCCESS
+}
+
+
+#####################################################
+#                                                   #
+#                   main loop                       #
+#                                                   #
+#####################################################
+
+slave="$( ciop-getparam slave )"
+
+[ -z "${slave}" ] && return ${ERR_NOSLAVE}
+
+set_env
+
+# Loops over the single master (could be extended in the future to support several pairs master/slave instead of a single master/slave pair
+while read master 
+do
+  #executing main on the current input file
+  main ${master} ${slave}
+  res=$?
+  [ ${res} -ne 0 ] && exit ${res}
+
+  #cleaning up dir
+  #clean "${TMPDIR}"
+done
+
+#ciop-log "INFO" "Cleaning up temporary directory"
+#rm -rf "${TMPDIR}"
+
+ciop-log "INFO" "SatCen change detection processing finished!"
+exit $SUCCESS
+
