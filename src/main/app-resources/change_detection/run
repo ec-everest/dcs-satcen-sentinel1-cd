@@ -212,7 +212,13 @@ function main() {
 
   gdal_translate ${TMPDIR}/cd.data/newBand.img ${TMPDIR}/cd.tif
 
-  ciop-publish -m ${TMPDIR}/cd.tif
+  gdal_translate -of PNG -scale 0 1 0 255 ${TMPDIR}/cd.tif ${TMPDIR}/cd.png
+
+  listgeo -tfw ${TMPDIR}/cd.tif 
+  mv ${TMPDIR}/cd.tfw ${TMPDIR}/cd.pngw
+
+  ciop-publish -m ${TMPDIR}/cd.png
+  ciop-publish -m ${TMPDIR}/cd.pngw
 
   return $SUCCESS
 }
