@@ -1,6 +1,5 @@
 #!/bin/bash
 
-set -x
 # source the ciop functions (e.g. ciop-log, ciop-getparam)
 source ${ciop_job_include}
 
