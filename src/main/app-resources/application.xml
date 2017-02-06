@@ -6,7 +6,7 @@
       <defaultParameters>
         <parameter id="polygon" title="Area of Interest" abstract="Area of Interest" scope="runtime" maxOccurs="1">POLYGON((-3.611068725585937 40.57602136929037,-3.611068725585937 40.42669550575275,-3.4047317504882812 40.42669550575275,-3.4047317504882812 40.57602136929037,-3.611068725585937 40.57602136929037))</parameter>
         <parameter id="polarization" title="Polarization" abstract="Polarization" scope="runtime" maxOccurs="1">VH</parameter>
-        <parameter id="slave" title="Slave Sentinel-1 product" abstract="Slave Sentinel-1 product" maxOccurs="1">file:///home/pnunes/S1A_IW_GRDH_1SDV_20160726T181047_20160726T181112_012323_0132DA_8A2E.zip</parameter>
+        <parameter id="slave" title="Slave Sentinel-1 product" abstract="Slave Sentinel-1 product" maxOccurs="1">https://catalog.terradue.com/sentinel1/search?uid=S1A_IW_GRDH_1SDV_20160726T181047_20160726T181112_012323_0132DA_8A2E</parameter>
       </defaultParameters>
       <defaultJobconf>
         <property id="ciop.job.max.tasks">1</property>
@@ -18,7 +18,7 @@
     <node id="node_change_detection">
       <job id="change_detection"/>
       <sources>
-        <source scope="runtime" id="master" title="Master Sentinel-1 product" abstract="Master Sentinel-1 product" refid="string:list" maxOccurs="1">file:///home/pnunes/S1A_IW_GRDH_1SDV_20160702T181046_20160702T181111_011973_01276C_42D6.zip</source>
+        <source scope="runtime" id="master" title="Master Sentinel-1 product" abstract="Master Sentinel-1 product" refid="string:list" maxOccurs="1">https://catalog.terradue.com/sentinel1/search?uid=S1A_IW_GRDH_1SDV_20160702T181046_20160702T181111_011973_01276C_42D6</source>
       </sources>
       <parameters/>
     </node>
