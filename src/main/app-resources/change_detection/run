@@ -1,5 +1,6 @@
 #!/bin/bash
 
+set -x
 # source the ciop functions (e.g. ciop-log, ciop-getparam)
 source ${ciop_job_include}
 
@@ -156,12 +157,12 @@ function main() {
   
   [ -z "${source1}" ] || [ -z "${source2}" ] && return ${ERR_INPUT}
 
-  #ciop-log "INFO" "downloading source1 [${source1}]"
-  source1=$( get_data "${source1}" "${TMPDIR}/downloads" )
+  ciop-log "INFO" "downloading source1 [${source1}]"
+  source1=$( get_data "${source1}" "${TMPDIR}" )
   #[ $? -ne 0 ] && return ${ERR_DOWNLOAD}
 
-  #ciop-log "INFO" "downloading source2 [${source2}]"
-  source2=$( get_data "${source2}" "${TMPDIR}/downloads" )
+  ciop-log "INFO" "downloading source2 [${source2}]"
+  source2=$( get_data "${source2}" "${TMPDIR}" )
   #[ $? -ne 0 ] && return ${ERR_DOWNLOAD}
 
   ciop-log "DEBUG" "source1: ${source1}"

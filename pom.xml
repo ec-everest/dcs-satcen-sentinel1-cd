@@ -20,7 +20,7 @@
   </properties>
   <scm>
     <connection>scm:git:ssh://git@github.com:ec-everest/dcs-satcen-sentinel1-cd</connection>
-    <developerConnection>scm:git@github.com:ec-everest/dcs-satcen-sentinel1-cd</developerConnection>
+    <developerConnection>scm:git:ssh://git@github.com/ec-everest/dcs-satcen-sentinel1-cd</developerConnection>
     <url>https://github.com/ec-everest/dcs-satcen-sentinel1-cd</url>
     <tag>HEAD</tag>
   </scm>
