@@ -61,7 +61,6 @@
       <outputSigmaBand>true</outputSigmaBand>
       <outputGammaBand>false</outputGammaBand>
       <outputBetaBand>false</outputBetaBand>
-      <outputDNBand>false</outputDNBand>
     </parameters>
   </node>
   <node id="Write">

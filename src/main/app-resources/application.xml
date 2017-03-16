@@ -1,20 +1,24 @@
 <?xml version="1.0" encoding="us-ascii"?>
 <application xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" id="application">
   <jobTemplates>
-    <jobTemplate id="template">
-      <streamingExecutable>/application/node/run</streamingExecutable>
+    <jobTemplate id="change_detection">
+      <streamingExecutable>/application/change_detection/run</streamingExecutable>
       <defaultParameters>
-        <parameter id="polygon" title="Area of Interest" abstract="Area of Interest" scope="runtime">POLYGON((-3.611068725585937 40.57602136929037,-3.611068725585937 40.42669550575275,-3.4047317504882812 40.42669550575275,-3.4047317504882812 40.57602136929037,-3.611068725585937 40.57602136929037))</parameter>
-        <parameter id="polarization" title="Polarization" abstract="Polarization" scope="runtime">VH</parameter>
+        <parameter id="polygon" title="Area of Interest" abstract="Area of Interest" scope="runtime" maxOccurs="1">POLYGON((-3.611068725585937 40.57602136929037,-3.611068725585937 40.42669550575275,-3.4047317504882812 40.42669550575275,-3.4047317504882812 40.57602136929037,-3.611068725585937 40.57602136929037))</parameter>
+        <parameter id="polarization" title="Polarization" abstract="Polarization" scope="runtime" maxOccurs="1">VH</parameter>
+        <parameter id="slave" title="Slave Sentinel-1 product" abstract="Slave Sentinel-1 product" scope="runtime" maxOccurs="1">https://catalog.terradue.com/sentinel1/search?uid=S1A_IW_GRDH_1SDV_20160726T181047_20160726T181112_012323_0132DA_8A2E</parameter>
       </defaultParameters>
+      <defaultJobconf>
+        <property id="ciop.job.max.tasks">1</property>
+      </defaultJobconf>
     </jobTemplate>
   </jobTemplates>
-    <workflow id="workflow" title="SatCen Change Detection Workflow" abstract="SatCen Change Detection Workflow archetype">
+    <workflow id="workflow" title="SatCen Change Detection Workflow" abstract="SatCen Change Detection Workflow">
     <workflowVersion>1.0</workflowVersion>
-    <node id="node">
-      <job id="template"/>
+    <node id="node_change_detection">
+      <job id="change_detection"/>
       <sources>
-        <source scope="runtime" id="sourceFiles" title="Sentinel-1 input" abstract="Comma separated Sentinel-1 inputs in the form of source1;source2" refid="string:list">file:///home/pnunes/S1A_IW_GRDH_1SDV_20160702T181046_20160702T181111_011973_01276C_42D6.zip;file:///home/pnunes/S1A_IW_GRDH_1SDV_20160726T181047_20160726T181112_012323_0132DA_8A2E.zip</source>
+        <source scope="runtime" id="master" title="Master Sentinel-1 product" abstract="Master Sentinel-1 product" refid="string:list" maxOccurs="1">https://catalog.terradue.com/sentinel1/search?uid=S1A_IW_GRDH_1SDV_20160702T181046_20160702T181111_011973_01276C_42D6</source>
       </sources>
       <parameters/>
     </node>
