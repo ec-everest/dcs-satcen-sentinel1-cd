@@ -211,7 +211,7 @@ function main() {
 
   gdal_translate ${TMPDIR}/cd.data/newBand.img ${TMPDIR}/cd.tif
 
-  gdal_translate -of PNG -scale 0 1 0 255 ${TMPDIR}/cd.tif ${TMPDIR}/cd.png
+  gdal_translate -of PNG -a_nodata 0 -scale 0 1 0 255 ${TMPDIR}/cd.tif ${TMPDIR}/cd.png
 
   listgeo -tfw ${TMPDIR}/cd.tif 
   mv ${TMPDIR}/cd.tfw ${TMPDIR}/cd.pngw
