@@ -11,7 +11,7 @@
     <version>2.0.0</version>
   </parent>
   <description>dcs-satcen-sentinel1-cd</description>
-  <version>1.0.2-SNAPSHOT</version>
+  <version>1.0.2</version>
   <properties>
     <summary>dcs-satcen-sentinel1-cd</summary>
     <description>dcs-satcen-sentinel1-cd</description>
