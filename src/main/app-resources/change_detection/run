@@ -207,14 +207,16 @@ function main() {
   tar -C ${TMPDIR} -czf ${TMPDIR}/cd.tgz cd.dim cd.data 
 
   # stage-out the binned product
-  ciop-publish -m ${TMPDIR}/cd.tgz 
+  ciop-publish -m ${TMPDIR}/cd.tgz
+  # Convert to GeoTIFF
+  /usr/bin/gdal_translate ${TMPDIR}/cd.data/newBand.img ${TMPDIR}/cd.tif
+  # Convert changes in white to red
+  /usr/bin/gdaldem color-relief -of GTiff ${TMPDIR}/cd.tif /application/change_detection/col.txt ${TMPDIR}/color_cd.tif
+  # Scale, add transparency and convert to PNG
+  /usr/bin/gdal_translate -of PNG -a_nodata 0 -scale 0 1 0 255 ${TMPDIR}/color_cd.tif ${TMPDIR}/cd.png
 
-  gdal_translate ${TMPDIR}/cd.data/newBand.img ${TMPDIR}/cd.tif
-
-  gdal_translate -of PNG -a_nodata 0 -scale 0 1 0 255 ${TMPDIR}/cd.tif ${TMPDIR}/cd.png
-
-  listgeo -tfw ${TMPDIR}/cd.tif 
-  mv ${TMPDIR}/cd.tfw ${TMPDIR}/cd.pngw
+  listgeo -tfw ${TMPDIR}/color_cd.tif
+  mv ${TMPDIR}/color_cd.tfw ${TMPDIR}/cd.pngw
 
   ciop-publish -m ${TMPDIR}/cd.png
   ciop-publish -m ${TMPDIR}/cd.pngw
