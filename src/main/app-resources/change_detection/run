@@ -69,6 +69,8 @@ function set_env() {
   export SNAP_HOME=/opt/snap
   export PATH=${SNAP_HOME}/bin:${PATH}
   export SNAP_VERSION=$( cat ${SNAP_HOME}/VERSION.txt )
+  
+  setGDALEnv
 }
 
 
