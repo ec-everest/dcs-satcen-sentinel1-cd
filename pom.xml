@@ -49,6 +49,7 @@
                   <requires>
                     <require>snap</require>
                     <require>miniconda</require>
+                    <require>libgeotiff</require>
                   </requires>
                   <postinstallScriptlet combine.self="override">
                     <script>conda update conda -y &amp;&amp; conda install -y gdal geos=3.5.0 libnetcdf</script>
