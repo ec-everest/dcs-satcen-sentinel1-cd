@@ -69,6 +69,8 @@ function set_env() {
   export SNAP_HOME=/opt/snap
   export PATH=${SNAP_HOME}/bin:${PATH}
   export SNAP_VERSION=$( cat ${SNAP_HOME}/VERSION.txt )
+
+  setGDALEnv
 }
 
 
@@ -128,11 +130,14 @@ function change_detection() {
 }
 
 function setGDALEnv() {
+  
   # setup GDAL environment
-  export GDAL_HOME=$( find /opt/anaconda/pkgs/ -name "gdal-2.1.0-py27_?" )
+  export GDAL_HOME=$( find /opt/anaconda/pkgs/ -name "gdal-2.?.?-*" -type d )
   export PATH=$GDAL_HOME/bin/:$PATH
-  export LD_LIBRARY_PATH=$GDAL_HOME/lib/:/opt/anaconda/pkgs/geos-3.4.2-0/lib:/opt/anaconda/lib:$LD_LIBRARY_PATH
+  geos_lib=$( find /opt/anaconda/pkgs/ -name "geos-*" -type d )
+  export LD_LIBRARY_PATH=$GDAL_HOME/lib/:${geos_lib}:/opt/anaconda/lib:$LD_LIBRARY_PATH
   export GDAL_DATA=$GDAL_HOME/share/gdal
+
 }
 
 function get_data() {
@@ -209,11 +214,15 @@ function main() {
   # stage-out the binned product
   ciop-publish -m ${TMPDIR}/cd.tgz
   # Convert to GeoTIFF
-  /usr/bin/gdal_translate ${TMPDIR}/cd.data/newBand.img ${TMPDIR}/cd.tif
+  gdal_translate -ot Byte -a_nodata 0 ${TMPDIR}/cd.data/newBand.img ${TMPDIR}/cd.tif
+  ciop-publish -m ${TMPDIR}/cd.tif
+  
   # Convert changes in white to red
-  /usr/bin/gdaldem color-relief -of GTiff ${TMPDIR}/cd.tif /application/change_detection/col.txt ${TMPDIR}/color_cd.tif
+  gdaldem color-relief -alpha -of GTiff ${TMPDIR}/cd.data/newBand.img /application/change_detection/col.txt  ${TMPDIR}/color_cd.tif
+  
   # Scale, add transparency and convert to PNG
-  /usr/bin/gdal_translate -of PNG -a_nodata 0 -scale 0 1 0 255 ${TMPDIR}/color_cd.tif ${TMPDIR}/cd.png
+  gdal_translate -of PNG -a_nodata 0 -scale 0 1 0 255 ${TMPDIR}/color_cd.tif ${TMPDIR}/cd.png
+
 
   listgeo -tfw ${TMPDIR}/color_cd.tif
   mv ${TMPDIR}/color_cd.tfw ${TMPDIR}/cd.pngw
