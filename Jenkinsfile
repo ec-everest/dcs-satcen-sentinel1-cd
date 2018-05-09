@@ -1,30 +1,12 @@
-def artserver = Artifactory.server('store.terradue.com')
-def buildInfo = Artifactory.newBuildInfo()
-buildInfo.env.capture = true
+node('ci-community') {
 
-pipeline {
+  stage 'Checkout'
+  checkout scm
 
-  options {
-    buildDiscarder(logRotator(numToKeepStr: '5'))
-  }
+  stage 'Setup environment'
+  env.PATH = "${tool 'apache-maven-3.0.5'}/bin:${env.PATH}"
 
-  agent { 
-    node { 
-      label 'ci-community-docker' 
-    }
-  }
+  stage 'Package and Deploy'
+  sh 'mvn deploy -Drelease=true'
 
-  stages {
-
-    stage('Package & Dockerize') {
-      steps {
-        
-        // See Jenkins's "Global Tool Configuration"
-        withMaven( maven: 'apache-maven-3.0.5' ) {
-            sh 'mvn -B deploy'
-        }
-
-      }
-    }
-  }
 }
