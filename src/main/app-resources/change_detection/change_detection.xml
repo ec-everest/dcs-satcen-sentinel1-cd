@@ -18,7 +18,6 @@
           <name>newBand</name>
           <type>float32</type>
           <expression>(${bName0}>0.0001)&amp;&amp;(${bName1}>0.0001)&amp;&amp;(abs(log10(${bName0}/${bName1}))>1)&amp;&amp;(${bName0}>0.05||${bName1}>0.05)?1:0</expression>
-
           <description/>
           <unit/>
           <noDataValue>0.0</noDataValue>

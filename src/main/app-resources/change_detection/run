@@ -214,6 +214,7 @@ function main() {
   # stage-out the binned product
   ciop-publish -m ${TMPDIR}/cd.tgz
   # Convert to GeoTIFF
+
   gdal_translate -ot Byte -a_nodata 0 ${TMPDIR}/cd.data/newBand.img ${TMPDIR}/cd.tif
   ciop-publish -m ${TMPDIR}/cd.tif
   
@@ -222,6 +223,7 @@ function main() {
   
   # Scale, add transparency and convert to PNG
   gdal_translate -of PNG -a_nodata 0 -scale 0 1 0 255 ${TMPDIR}/color_cd.tif ${TMPDIR}/cd.png
+
 
 
   listgeo -tfw ${TMPDIR}/color_cd.tif
