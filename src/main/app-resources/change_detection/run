@@ -20,7 +20,7 @@ ERR_PROCESS_STACK=25
 ERR_PROCESS_CD=26
 
 # Global variables
-GPT="/opt/snap/bin/gpt"
+GPT="/opt/snap/bin/gpt -x"
 
 #####################################################
 #                                                   #
